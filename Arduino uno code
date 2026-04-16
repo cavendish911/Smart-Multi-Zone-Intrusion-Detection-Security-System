@@ -1,0 +1,96 @@
+#include <LiquidCrystal.h>
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+const int pir1 = 7;   // Area 1
+const int pir2 = 6;   // Area 2
+const int ledPin = 13;
+const int buzzerPin = 8;
+
+unsigned long startTime = 0;
+bool dangerMode = false;
+int activeArea = 0; // 1 or 2
+
+void setup() {
+  pinMode(pir1, INPUT);
+  pinMode(pir2, INPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+
+  lcd.begin(16, 2);
+  lcd.print("System Ready");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+
+  int motion1 = digitalRead(pir1);
+  int motion2 = digitalRead(pir2);
+
+  // Detect which area is active
+  if (motion1 == HIGH || motion2 == HIGH) {
+
+    digitalWrite(ledPin, HIGH);
+
+    if (startTime == 0) {
+      startTime = millis();
+    }
+
+    unsigned long seconds = (millis() - startTime) / 1000;
+
+    // Set active area
+    if (motion1 == HIGH) activeArea = 1;
+    if (motion2 == HIGH) activeArea = 2;
+
+    // Danger mode after 10 sec
+    if (seconds > 10) {
+      dangerMode = true;
+    }
+
+    // LCD Line 1
+    lcd.setCursor(0, 0);
+    if (dangerMode) {
+      lcd.print("!!! DANGER !!! ");
+    } else {
+      lcd.print("Target Area ");
+      lcd.print(activeArea);
+      lcd.print("   ");
+    }
+
+    // LCD Line 2
+    lcd.setCursor(0, 1);
+    lcd.print("Time: ");
+    lcd.print(seconds);
+    lcd.print("s A");
+    lcd.print(activeArea);
+    lcd.print(" ");
+
+    // Alarm behavior
+    if (dangerMode) {
+      tone(buzzerPin, 2000);
+      delay(100);
+      noTone(buzzerPin);
+      delay(100);
+    } else {
+      tone(buzzerPin, 1000);
+    }
+
+  } else {
+    // Reset system
+    digitalWrite(ledPin, LOW);
+    noTone(buzzerPin);
+
+    startTime = 0;
+    dangerMode = false;
+    activeArea = 0;
+
+    lcd.setCursor(0, 0);
+    lcd.print("Safe            ");
+
+    lcd.setCursor(0, 1);
+    lcd.print("Waiting...      ");
+  }
+
+  delay(50);
+}
